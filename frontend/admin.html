@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrimsonBookStore - Admin</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">CrimsonBookStore</h1>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="books.html">Books</a>
+                <a href="cart.html">Cart</a>
+                <a href="orders.html">My Orders</a>
+                <a href="sell.html">Sell Book</a>
+                <a href="admin.html" class="active">Admin</a>
+                <div class="auth-buttons">
+                    <span id="userInfo" class="user-info" style="display: none;"></span>
+                    <button id="logoutBtn" class="btn btn-outline" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h2>Admin Dashboard</h2>
+        
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="showTab('inventory')">Inventory</button>
+            <button class="tab-btn" onclick="showTab('submissions')">Sell Submissions</button>
+            <button class="tab-btn" onclick="showTab('orders')">All Orders</button>
+            <button class="tab-btn" onclick="showTab('users')">Users</button>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventoryTab" class="tab-content active">
+            <div class="admin-header">
+                <h3>Book Inventory</h3>
+                <button onclick="showAddBookForm()" class="btn btn-primary">Add New Book</button>
+            </div>
+            <div id="inventoryContent">
+                <div class="loading">Loading inventory...</div>
+            </div>
+        </div>
+
+        <!-- Submissions Tab -->
+        <div id="submissionsTab" class="tab-content">
+            <h3>Sell Submissions</h3>
+            <div id="submissionsContent">
+                <div class="loading">Loading submissions...</div>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="ordersTab" class="tab-content">
+            <h3>All Purchase Orders</h3>
+            <div id="ordersContent">
+                <div class="loading">Loading orders...</div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="usersTab" class="tab-content">
+            <h3>User Management</h3>
+            <div id="usersContent">
+                <div class="loading">Loading users...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Book Modal -->
+    <div id="editBookModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditBookForm()">&times;</span>
+            <h2>Edit Book</h2>
+            <form id="editBookForm">
+                <input type="hidden" id="editBookID">
+                <div class="form-group">
+                    <label>Title:</label>
+                    <input type="text" id="editTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Author:</label>
+                    <input type="text" id="editAuthor" required>
+                </div>
+                <div class="form-group">
+                    <label>Edition:</label>
+                    <input type="text" id="editEdition">
+                </div>
+                <div class="form-group">
+                    <label>Condition:</label>
+                    <select id="editCondition" required>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Acquisition Cost ($):</label>
+                    <input type="number" id="editAcquisitionCost" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Selling Price ($):</label>
+                    <input type="number" id="editSellingPrice" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Quantity:</label>
+                    <input type="number" id="editStockQuantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Status:</label>
+                    <select id="editStatus" required>
+                        <option value="Available">Available</option>
+                        <option value="Unavailable">Unavailable</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Book</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Book Modal -->
+    <div id="addBookModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddBookForm()">&times;</span>
+            <h2>Add New Book</h2>
+            <form id="addBookForm">
+                <div class="form-group">
+                    <label>ISBN:</label>
+                    <input type="text" id="addISBN" required>
+                </div>
+                <div class="form-group">
+                    <label>Title:</label>
+                    <input type="text" id="addTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Author:</label>
+                    <input type="text" id="addAuthor" required>
+                </div>
+                <div class="form-group">
+                    <label>Edition:</label>
+                    <input type="text" id="addEdition">
+                </div>
+                <div class="form-group">
+                    <label>Condition:</label>
+                    <select id="addCondition" required>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Acquisition Cost ($):</label>
+                    <input type="number" id="addAcquisitionCost" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Selling Price ($):</label>
+                    <input type="number" id="addSellingPrice" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Quantity:</label>
+                    <input type="number" id="addStockQuantity" min="0" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Book</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
+
