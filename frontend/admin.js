@@ -34,6 +34,11 @@ async function loadInventory() {
 function displayInventory(books) {
     const container = document.getElementById('inventoryContent');
     
+    if (books.length === 0) {
+        container.innerHTML = '<div class="error">No books in inventory</div>';
+        return;
+    }
+    
     let html = `
         <table class="inventory-table">
             <thead>
@@ -88,14 +93,21 @@ async function loadSubmissions() {
 function displayAdminSubmissions(submissions) {
     const container = document.getElementById('submissionsContent');
     
+    if (submissions.length === 0) {
+        container.innerHTML = '<div class="error">No submissions found</div>';
+        return;
+    }
+    
     container.innerHTML = submissions.map(sub => {
         const statusClass = `status-${sub.submissionStatus.toLowerCase()}`;
         return `
             <div class="submission-card">
-                <h4>${escapeHtml(sub.title)}</h4>
-                <p><strong>Author:</strong> ${escapeHtml(sub.author)} | <strong>ISBN:</strong> ${escapeHtml(sub.isbn)}</p>
-                <p><strong>Asking Price:</strong> $${sub.askingPrice.toFixed(2)} | <strong>Condition:</strong> ${escapeHtml(sub.condition)}</p>
-                <span class="submission-status ${statusClass}">${sub.submissionStatus}</span>
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <h4 style="margin: 0; flex: 1;">${escapeHtml(sub.title)}</h4>
+                    <span class="submission-status ${statusClass}">${sub.submissionStatus}</span>
+                </div>
+                <p style="margin: 0.5rem 0;"><strong>Author:</strong> ${escapeHtml(sub.author)} | <strong>ISBN:</strong> ${escapeHtml(sub.isbn)}</p>
+                <p style="margin: 0.5rem 0;"><strong>Asking Price:</strong> $${sub.askingPrice.toFixed(2)} | <strong>Condition:</strong> ${escapeHtml(sub.condition)}</p>
                 ${sub.submissionStatus === 'Pending' ? `
                     <div class="action-buttons" style="margin-top: 1rem;">
                         <button onclick="approveSubmission(${sub.submissionID})" class="btn btn-success btn-small">Approve</button>
@@ -122,16 +134,22 @@ async function loadAllOrders() {
 function displayAdminOrders(orders) {
     const container = document.getElementById('ordersContent');
     
+    if (orders.length === 0) {
+        container.innerHTML = '<div class="error">No orders found</div>';
+        return;
+    }
+    
     container.innerHTML = orders.map(order => {
         const statusClass = `status-${order.status.toLowerCase()}`;
         return `
             <div class="order-card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>Order #${order.poid} - User ${order.userID}</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <h3 style="margin: 0;">Order #${order.poid} - User ${order.userID}</h3>
                     <span class="order-status ${statusClass}">${order.status}</span>
                 </div>
-                <p><strong>Date:</strong> ${new Date(order.orderDate).toLocaleDateString()} | <strong>Total:</strong> $${order.total.toFixed(2)}</p>
+                <p style="margin: 0.5rem 0;"><strong>Date:</strong> ${new Date(order.orderDate).toLocaleDateString()} | <strong>Total:</strong> $${order.total.toFixed(2)}</p>
                 <div class="action-buttons" style="margin-top: 1rem;">
+                    <label style="font-weight: 500; margin-right: 0.5rem;">Update Status:</label>
                     <select id="status_${order.poid}" onchange="updateOrderStatus(${order.poid})">
                         <option value="New" ${order.status === 'New' ? 'selected' : ''}>New</option>
                         <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
@@ -301,6 +319,11 @@ async function loadUsers() {
 
 function displayUsers(users) {
     const container = document.getElementById('usersContent');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div class="error">No users found</div>';
+        return;
+    }
     
     let html = `
         <table class="inventory-table">

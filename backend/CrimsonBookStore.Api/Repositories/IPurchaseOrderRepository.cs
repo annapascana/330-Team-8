@@ -9,6 +9,7 @@ public interface IPurchaseOrderRepository
     Task<PurchaseOrder?> GetByIdAsync(int poId);
     Task<int> CreateOrderAsync(PurchaseOrder order);
     Task<bool> CreateLineItemAsync(OrderLineItem lineItem);
+    Task<int> CreateOrderWithLineItemsAsync(PurchaseOrder order, List<OrderLineItem> lineItems);
     Task<bool> UpdateStatusAsync(int poId, string status, DateTime? cancelledAt = null);
     Task<List<OrderLineItem>> GetLineItemsByOrderIdAsync(int poId);
     Task<bool> DeleteOrderAsync(int poId);
