@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrimsonBookStore - Admin</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">CrimsonBookStore</h1>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="books.html">Books</a>
+                <a href="cart.html">Cart</a>
+                <a href="orders.html">My Orders</a>
+                <a href="sell.html">Sell Book</a>
+                <a href="admin.html" class="active">Admin</a>
+                <a href="profile.html">Profile</a>
+                <div class="auth-buttons">
+                    <span id="userInfo" class="user-info" style="display: none;"></span>
+                    <button id="logoutBtn" class="btn btn-outline" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h2>Admin Dashboard</h2>
+        
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="showTab('inventory')">Inventory</button>
+            <button class="tab-btn" onclick="showTab('submissions')">Sell Submissions</button>
+            <button class="tab-btn" onclick="showTab('orders')">All Orders</button>
+            <button class="tab-btn" onclick="showTab('users')">Users</button>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventoryTab" class="tab-content active">
+            <div class="admin-header">
+                <h3>Book Inventory</h3>
+                <button onclick="showAddBookForm()" class="btn btn-primary">Add New Book</button>
+            </div>
+            <div id="inventoryContent">
+                <div class="loading">Loading inventory...</div>
+            </div>
+        </div>
+
+        <!-- Submissions Tab -->
+        <div id="submissionsTab" class="tab-content">
+            <h3>Sell Submissions</h3>
+            <div id="submissionsContent">
+                <div class="loading">Loading submissions...</div>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="ordersTab" class="tab-content">
+            <h3>All Purchase Orders</h3>
+            <div id="ordersContent">
+                <div class="loading">Loading orders...</div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="usersTab" class="tab-content">
+            <h3>User Management</h3>
+            <div id="usersContent">
+                <div class="loading">Loading users...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Book Modal -->
+    <div id="editBookModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditBookForm()">&times;</span>
+            <h2>Edit Book</h2>
+            <form id="editBookForm">
+                <input type="hidden" id="editBookID">
+                <div class="form-group">
+                    <label>Title: <span style="color: red;">*</span></label>
+                    <input type="text" id="editTitle" required placeholder="Enter book title">
+                </div>
+                <div class="form-group">
+                    <label>Author: <span style="color: red;">*</span></label>
+                    <input type="text" id="editAuthor" required placeholder="Enter author name">
+                </div>
+                <div class="form-group">
+                    <label>Edition:</label>
+                    <input type="text" id="editEdition" placeholder="e.g., 5th Edition">
+                </div>
+                <div class="form-group">
+                    <label>Condition: <span style="color: red;">*</span></label>
+                    <select id="editCondition" required>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Acquisition Cost ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="editAcquisitionCost" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Selling Price ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="editSellingPrice" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Stock Quantity: <span style="color: red;">*</span></label>
+                        <input type="number" id="editStockQuantity" min="0" required placeholder="0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Status: <span style="color: red;">*</span></label>
+                        <select id="editStatus" required>
+                            <option value="Available">Available</option>
+                            <option value="Unavailable">Unavailable</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeEditBookForm()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Update Book</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Book Modal -->
+    <div id="addBookModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddBookForm()">&times;</span>
+            <h2>Add New Book</h2>
+            <form id="addBookForm">
+                <div class="form-group">
+                    <label>ISBN: <span style="color: red;">*</span></label>
+                    <input type="text" id="addISBN" required placeholder="Enter ISBN">
+                </div>
+                <div class="form-group">
+                    <label>Title: <span style="color: red;">*</span></label>
+                    <input type="text" id="addTitle" required placeholder="Enter book title">
+                </div>
+                <div class="form-group">
+                    <label>Author: <span style="color: red;">*</span></label>
+                    <input type="text" id="addAuthor" required placeholder="Enter author name">
+                </div>
+                <div class="form-group">
+                    <label>Edition:</label>
+                    <input type="text" id="addEdition" placeholder="e.g., 5th Edition">
+                </div>
+                <div class="form-group">
+                    <label>Condition: <span style="color: red;">*</span></label>
+                    <select id="addCondition" required>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Acquisition Cost ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="addAcquisitionCost" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Selling Price ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="addSellingPrice" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Stock Quantity: <span style="color: red;">*</span></label>
+                    <input type="number" id="addStockQuantity" min="0" required placeholder="0">
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeAddBookForm()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Book</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
+

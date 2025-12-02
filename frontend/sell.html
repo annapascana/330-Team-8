@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrimsonBookStore - Sell Book</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">CrimsonBookStore</h1>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="books.html">Books</a>
+                <a href="cart.html">Cart</a>
+                <a href="orders.html">My Orders</a>
+                <a href="sell.html" class="active">Sell Book</a>
+                <a href="admin.html">Admin</a>
+                <a href="profile.html">Profile</a>
+                <div class="auth-buttons">
+                    <span id="userInfo" class="user-info" style="display: none;"></span>
+                    <button id="logoutBtn" class="btn btn-outline" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h2>Sell Your Book</h2>
+        <form id="sellForm" class="form-container">
+            <div class="form-group">
+                <label>Title:</label>
+                <input type="text" id="sellTitle" required>
+            </div>
+            <div class="form-group">
+                <label>Author:</label>
+                <input type="text" id="sellAuthor" required>
+            </div>
+            <div class="form-group">
+                <label>ISBN:</label>
+                <input type="text" id="sellISBN" required>
+            </div>
+            <div class="form-group">
+                <label>Edition:</label>
+                <input type="text" id="sellEdition">
+            </div>
+            <div class="form-group">
+                <label>Condition:</label>
+                <select id="sellCondition" required>
+                    <option value="New">New</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Asking Price ($):</label>
+                <input type="number" id="sellPrice" step="0.01" min="0" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit for Review</button>
+        </form>
+
+        <div id="purchasedBooksList" class="submissions-section" style="margin-top: 2rem;">
+            <h3>Books You Own (Click to sell)</h3>
+            <div id="purchasedBooksContent">
+                <div class="loading">Loading your purchased books...</div>
+            </div>
+        </div>
+
+        <div id="submissionsList" class="submissions-section" style="margin-top: 2rem;">
+            <h3>My Submissions</h3>
+            <div id="submissionsContent">
+                <div class="loading">Loading submissions...</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
+    <script src="sell.js"></script>
+</body>
+</html>
+

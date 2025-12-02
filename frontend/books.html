@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrimsonBookStore - Books</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">CrimsonBookStore</h1>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="books.html" class="active">Books</a>
+                <a href="cart.html">Cart</a>
+                <a href="orders.html">My Orders</a>
+                <a href="sell.html">Sell Book</a>
+                <a href="admin.html">Admin</a>
+                <a href="profile.html">Profile</a>
+                <div class="auth-buttons">
+                    <span id="userInfo" class="user-info" style="display: none;"></span>
+                    <button id="logoutBtn" class="btn btn-outline" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="search-section">
+            <h2>Browse Books</h2>
+            <div class="search-form">
+                <input type="text" id="searchTitle" placeholder="Search by title...">
+                <input type="text" id="searchAuthor" placeholder="Search by author...">
+                <input type="text" id="searchISBN" placeholder="Search by ISBN...">
+                <button onclick="searchBooks()" class="btn btn-primary">Search</button>
+                <button onclick="clearSearch()" class="btn btn-outline">Clear</button>
+            </div>
+        </section>
+
+        <section class="filters-section" style="background: white; padding: 1.5rem; border-radius: 8px; margin: 2rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0;">Filters & Sort</h3>
+                <button onclick="clearAllFilters()" class="btn btn-outline btn-small">Clear All</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.9rem; margin-bottom: 0.5rem;">Min Price ($)</label>
+                    <input type="number" id="filterMinPrice" step="0.01" min="0" placeholder="0.00" 
+                           onchange="updateFilter('minPrice', this.value)" class="form-control">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.9rem; margin-bottom: 0.5rem;">Max Price ($)</label>
+                    <input type="number" id="filterMaxPrice" step="0.01" min="0" placeholder="999.99" 
+                           onchange="updateFilter('maxPrice', this.value)" class="form-control">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.9rem; margin-bottom: 0.5rem;">Condition</label>
+                    <select id="filterCondition" onchange="updateFilter('condition', this.value)" class="form-control">
+                        <option value="all">All Conditions</option>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.9rem; margin-bottom: 0.5rem;">Sort By</label>
+                    <select id="sortBy" onchange="updateFilter('sortBy', this.value)" class="form-control">
+                        <option value="title">Title</option>
+                        <option value="price">Price</option>
+                        <option value="author">Author</option>
+                        <option value="stock">Stock</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.9rem; margin-bottom: 0.5rem;">Order</label>
+                    <select id="sortOrder" onchange="updateFilter('sortOrder', this.value)" class="form-control">
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                    </select>
+                </div>
+            </div>
+            <div id="resultCount" style="margin-top: 1rem; color: #666; font-size: 0.9rem;"></div>
+        </section>
+
+        <section class="books-grid" id="booksGrid">
+            <div class="loading">Loading books...</div>
+        </section>
+    </main>
+
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="books.js"></script>
+</body>
+</html>
+
