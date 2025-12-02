@@ -51,7 +51,7 @@ function updateUI() {
         if (logoutBtn) logoutBtn.style.display = 'block';
         if (userInfo) {
             userInfo.textContent = `Welcome, ${currentUser.username}`;
-            userInfo.style.display = 'block';
+            userInfo.style.display = 'inline-block';
         }
     } else {
         if (loginBtn) loginBtn.style.display = 'inline-block';
