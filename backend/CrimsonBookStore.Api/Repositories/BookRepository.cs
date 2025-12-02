@@ -85,7 +85,8 @@ public class BookRepository : IBookRepository
     public async Task<int> CreateAsync(Book book)
     {
         using var conn = _connectionFactory.CreateConnection();
-        var sql = @"INSERT INTO Book (ISBN, Title, Edition, Condition, AcqCost, 
+        // Condition is a reserved keyword in MySQL, so we need to escape it with backticks
+        var sql = @"INSERT INTO Book (ISBN, Title, Edition, `Condition`, AcqCost, 
                     SellPrice, StockQty, Status, SubID, CreatedAt)
                     VALUES (@ISBN, @Title, @Edition, @Condition, @AcqCost,
                     @SellPrice, @StockQty, @Status, @SubID, @CreatedAt);
@@ -96,8 +97,9 @@ public class BookRepository : IBookRepository
     public async Task<bool> UpdateAsync(Book book)
     {
         using var conn = _connectionFactory.CreateConnection();
+        // Condition is a reserved keyword in MySQL, so we need to escape it with backticks
         var sql = @"UPDATE Book SET Title = @Title, Edition = @Edition,
-                    Condition = @Condition, AcqCost = @AcqCost,
+                    `Condition` = @Condition, AcqCost = @AcqCost,
                     SellPrice = @SellPrice, StockQty = @StockQty,
                     Status = @Status
                     WHERE BookID = @BookID";
@@ -133,6 +135,60 @@ public class BookRepository : IBookRepository
                     WHERE b.ISBN = @ISBN
                     GROUP BY b.BookID";
         return await conn.QueryFirstOrDefaultAsync<Book>(sql, new { ISBN = isbn });
+    }
+
+    public async Task<int> GetOrCreateAuthorAsync(string authorName)
+    {
+        if (string.IsNullOrWhiteSpace(authorName))
+        {
+            throw new ArgumentException("Author name cannot be empty", nameof(authorName));
+        }
+
+        using var conn = _connectionFactory.CreateConnection();
+        
+        // Check if author already exists
+        var existingAuthor = await conn.QueryFirstOrDefaultAsync<int?>(
+            "SELECT AuthID FROM Author WHERE AuthName = @AuthName",
+            new { AuthName = authorName.Trim() });
+        
+        if (existingAuthor.HasValue)
+        {
+            return existingAuthor.Value;
+        }
+        
+        // Create new author
+        // Get the next AuthID by finding max and adding 1
+        var maxId = await conn.QuerySingleOrDefaultAsync<int?>(
+            "SELECT MAX(AuthID) FROM Author");
+        var nextId = (maxId ?? 0) + 1;
+        
+        await conn.ExecuteAsync(
+            "INSERT INTO Author (AuthID, AuthName) VALUES (@AuthID, @AuthName)",
+            new { AuthID = nextId, AuthName = authorName.Trim() });
+        
+        return nextId;
+    }
+
+    public async Task<bool> CreateAuthoredByAsync(int bookId, int authorId)
+    {
+        using var conn = _connectionFactory.CreateConnection();
+        
+        // Check if relationship already exists
+        var exists = await conn.QueryFirstOrDefaultAsync<int?>(
+            "SELECT 1 FROM AuthoredBy WHERE BookID = @BookID AND AuthID = @AuthID",
+            new { BookID = bookId, AuthID = authorId });
+        
+        if (exists.HasValue)
+        {
+            return true; // Already exists
+        }
+        
+        // Create relationship
+        var rowsAffected = await conn.ExecuteAsync(
+            "INSERT INTO AuthoredBy (BookID, AuthID) VALUES (@BookID, @AuthID)",
+            new { BookID = bookId, AuthID = authorId });
+        
+        return rowsAffected > 0;
     }
 }
 

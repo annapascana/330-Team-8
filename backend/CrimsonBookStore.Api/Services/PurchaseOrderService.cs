@@ -51,36 +51,70 @@ public class PurchaseOrderService : IPurchaseOrderService
         };
 
         var orderId = await _orderRepository.CreateOrderAsync(order);
+        
+        if (orderId <= 0)
+        {
+            throw new Exception("Failed to create order: Invalid order ID returned");
+        }
+        
         order.POID = orderId;
 
-        // Create line items and decrement stock atomically
-        int lineNo = 1;
-        foreach (var item in cart.Items)
+        try
         {
-            var lineItem = new Api.Models.OrderLineItem
-            {
-                POID = orderId,
-                LineNo = lineNo++,
-                BookID = item.BookID,
-                Qty = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                LineTot = item.LineTotal
-            };
+            // Clean up any orphaned line items from previous failed checkout attempts
+            await _orderRepository.DeleteLineItemsByOrderIdAsync(orderId);
 
-            await _orderRepository.CreateLineItemAsync(lineItem);
+            // Create line items and decrement stock atomically
+            int lineNo = 1;
             
-            // Decrement stock
-            var success = await _bookRepository.UpdateStockAsync(item.BookID, -item.Quantity);
-            if (!success)
+            foreach (var item in cart.Items)
             {
-                throw new Exception($"Failed to update stock for book {item.BookID}");
+                var lineItem = new Api.Models.OrderLineItem
+                {
+                    POID = orderId,
+                    LineNo = lineNo++,
+                    BookID = item.BookID,
+                    Qty = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    LineTot = item.LineTotal
+                };
+
+                await _orderRepository.CreateLineItemAsync(lineItem);
+                
+                // Decrement stock
+                var success = await _bookRepository.UpdateStockAsync(item.BookID, -item.Quantity);
+                if (!success)
+                {
+                    throw new Exception($"Failed to update stock for book {item.BookID}");
+                }
             }
+
+            // Clear cart
+            await _cartService.ClearCartAsync(sessionId);
+
+            // Reload the order from database to get line items with book details
+            var completedOrder = await _orderRepository.GetByIdAsync(orderId);
+            if (completedOrder == null)
+            {
+                throw new Exception($"Failed to retrieve created order with ID {orderId}");
+            }
+
+            return await MapToResponse(completedOrder);
         }
-
-        // Clear cart
-        await _cartService.ClearCartAsync(sessionId);
-
-        return await MapToResponse(order);
+        catch
+        {
+            // If line item creation fails, clean up the orphaned order
+            // Note: This is a best-effort cleanup - the order might still exist if cleanup fails
+            try
+            {
+                await _orderRepository.DeleteOrderAsync(orderId);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+            throw;
+        }
     }
 
     public async Task<List<OrderResponse>> GetOrdersByUserIdAsync(int userId)
@@ -89,7 +123,20 @@ public class PurchaseOrderService : IPurchaseOrderService
         var responses = new List<OrderResponse>();
         foreach (var order in orders)
         {
-            responses.Add(await MapToResponse(order));
+            try
+            {
+                // Filter out invalid orders (POID = 0) - these shouldn't exist but handle gracefully
+                if (order.POID > 0)
+                {
+                    responses.Add(await MapToResponse(order));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but continue processing other orders
+                // This handles cases where line items might fail to load
+                System.Diagnostics.Debug.WriteLine($"Error loading order {order.POID}: {ex.Message}");
+            }
         }
         return responses;
     }
@@ -100,7 +147,11 @@ public class PurchaseOrderService : IPurchaseOrderService
         var responses = new List<OrderResponse>();
         foreach (var order in orders)
         {
-            responses.Add(await MapToResponse(order));
+            // Filter out invalid orders (POID = 0)
+            if (order.POID > 0)
+            {
+                responses.Add(await MapToResponse(order));
+            }
         }
         return responses;
     }
@@ -127,7 +178,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         return await _orderRepository.UpdateStatusAsync(orderId, "Cancelled", DateTime.UtcNow);
     }
 
-    private async Task<OrderResponse> MapToResponse(Api.Models.PurchaseOrder order)
+    private Task<OrderResponse> MapToResponse(Api.Models.PurchaseOrder order)
     {
         var response = new OrderResponse
         {
@@ -154,7 +205,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             });
         }
 
-        return response;
+        return Task.FromResult(response);
     }
 }
 

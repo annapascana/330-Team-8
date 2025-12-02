@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CrimsonBookStore.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+986190a78391429f3c4fad1f7dcbe3ada2c54e39")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+76becf698e1b2c7769fe6bb3f09c84913b71b192")]
 [assembly: System.Reflection.AssemblyProductAttribute("CrimsonBookStore.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CrimsonBookStore.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

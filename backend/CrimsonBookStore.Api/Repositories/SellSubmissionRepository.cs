@@ -41,12 +41,39 @@ public class SellSubmissionRepository : ISellSubmissionRepository
     public async Task<int> CreateAsync(SellSubmission submission)
     {
         using var conn = _connectionFactory.CreateConnection();
-        var sql = @"INSERT INTO SellSub (UserID, Title, AuthTxt, ISBN, Edition, Condition, 
+        await conn.OpenAsync();
+        
+        // Condition is a reserved keyword in MySQL, so we need to escape it with backticks
+        var sql = @"INSERT INTO SellSub (UserID, Title, AuthTxt, ISBN, Edition, `Condition`, 
                     AskPrice, Status, CreatedAt)
                     VALUES (@UserID, @Title, @AuthTxt, @ISBN, @Edition, @Condition,
-                    @AskPrice, @Status, @CreatedAt);
-                    SELECT LAST_INSERT_ID();";
-        return await conn.QuerySingleAsync<int>(sql, submission);
+                    @AskPrice, @Status, @CreatedAt)";
+        
+        var rowsAffected = await conn.ExecuteAsync(sql, submission);
+        
+        if (rowsAffected == 0)
+        {
+            throw new Exception("Failed to create sell submission");
+        }
+        
+        // Get the inserted ID
+        var submissionId = await conn.QuerySingleAsync<int>("SELECT LAST_INSERT_ID()");
+        
+        if (submissionId == 0)
+        {
+            // Fallback: try to get max ID
+            var maxId = await conn.QuerySingleAsync<int>("SELECT COALESCE(MAX(SubID), 0) FROM SellSub");
+            if (maxId > 0)
+            {
+                submissionId = maxId;
+            }
+            else
+            {
+                throw new Exception("Failed to retrieve submission ID. AUTO_INCREMENT may not be configured correctly.");
+            }
+        }
+        
+        return submissionId;
     }
 
     public async Task<bool> UpdateAsync(SellSubmission submission)

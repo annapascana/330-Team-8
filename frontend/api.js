@@ -13,12 +13,52 @@ async function apiCall(endpoint, options = {}) {
             }
         });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        // Handle 204 No Content responses (no body) - check BEFORE reading body
+        if (response.status === 204) {
+            return null;
         }
 
-        return await response.json();
+        if (!response.ok) {
+            // Try to get error message, but handle empty responses
+            let errorMessage = 'Request failed';
+            try {
+                const text = await response.text();
+                if (text && text.trim().length > 0) {
+                    const error = JSON.parse(text);
+                    errorMessage = error.message || error.error || errorMessage;
+                    console.error('API Error Response:', error);
+                } else {
+                    errorMessage = `HTTP error! status: ${response.status}`;
+                }
+            } catch (e) {
+                // If we can't parse, use status code
+                console.error('Failed to parse error response:', e);
+                errorMessage = `HTTP error! status: ${response.status}`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        // Check if response has content to parse
+        const contentType = response.headers.get('content-type');
+        const text = await response.text();
+        
+        // If no content, return null
+        if (!text || text.trim().length === 0) {
+            return null;
+        }
+        
+        // Try to parse as JSON if content-type suggests JSON
+        if (contentType && contentType.includes('application/json')) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                // If parsing fails, return null
+                console.warn('Failed to parse JSON response:', e);
+                return null;
+            }
+        }
+        
+        return text;
     } catch (error) {
         console.error('API Error:', error);
         throw error;

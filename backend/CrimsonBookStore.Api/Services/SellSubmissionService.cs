@@ -56,11 +56,13 @@ public class SellSubmissionService : ISellSubmissionService
 
         // Check if book with this ISBN already exists
         var existingBook = await _bookRepository.GetByISBNAsync(submission.ISBN);
+        int bookId;
         
         if (existingBook != null)
         {
             // Update existing book stock
-            await _bookRepository.UpdateStockAsync(existingBook.BookID, 1);
+            bookId = existingBook.BookID;
+            await _bookRepository.UpdateStockAsync(bookId, 1);
         }
         else
         {
@@ -78,9 +80,22 @@ public class SellSubmissionService : ISellSubmissionService
                 SubID = submission.SubID,
                 CreatedAt = DateTime.UtcNow
             };
-            var bookId = await _bookRepository.CreateAsync(book);
-            
-            // TODO: Create Author record and AuthoredBy relationship if needed
+            bookId = await _bookRepository.CreateAsync(book);
+        }
+        
+        // Create Author record and AuthoredBy relationship (for both new and existing books)
+        if (!string.IsNullOrWhiteSpace(submission.AuthTxt))
+        {
+            // Handle multiple authors separated by comma
+            var authors = submission.AuthTxt.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var authorName in authors)
+            {
+                if (!string.IsNullOrWhiteSpace(authorName))
+                {
+                    var authorId = await _bookRepository.GetOrCreateAuthorAsync(authorName);
+                    await _bookRepository.CreateAuthoredByAsync(bookId, authorId);
+                }
+            }
         }
 
         // Update submission status

@@ -12,5 +12,7 @@ public interface IBookRepository
     Task<bool> DeleteAsync(int bookId);
     Task<bool> UpdateStockAsync(int bookId, int quantityChange);
     Task<Book?> GetByISBNAsync(string isbn);
+    Task<int> GetOrCreateAuthorAsync(string authorName);
+    Task<bool> CreateAuthoredByAsync(int bookId, int authorId);
 }
 

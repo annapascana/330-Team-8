@@ -17,13 +17,21 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
     {
         using var conn = _connectionFactory.CreateConnection();
         var orders = await conn.QueryAsync<PurchaseOrder>(
-            "SELECT * FROM PurchaseOrder WHERE UserID = @UserID ORDER BY UpdAt DESC",
+            "SELECT * FROM PurchaseOrder WHERE UserID = @UserID AND POID > 0 ORDER BY UpdAt DESC",
             new { UserID = userId });
         
         var ordersList = orders.ToList();
         foreach (var order in ordersList)
         {
-            order.LineItems = await GetLineItemsByOrderIdAsync(order.POID);
+            try
+            {
+                order.LineItems = await GetLineItemsByOrderIdAsync(order.POID);
+            }
+            catch
+            {
+                // If line items fail to load, set empty list but still return the order
+                order.LineItems = new List<OrderLineItem>();
+            }
         }
         return ordersList;
     }
@@ -59,11 +67,67 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
     public async Task<int> CreateOrderAsync(PurchaseOrder order)
     {
         using var conn = _connectionFactory.CreateConnection();
-        // Note: BookID in PurchaseOrder is from ERD, but we'll use first book from line items
-        var sql = @"INSERT INTO PurchaseOrder (UserID, BookID, Status, SubTot, Tax, Total, UpdAt)
-                    VALUES (@UserID, @BookID, @Status, @SubTot, @Tax, @Total, @UpdAt);
-                    SELECT LAST_INSERT_ID();";
-        return await conn.QuerySingleAsync<int>(sql, order);
+        await conn.OpenAsync();
+        
+        using var transaction = await conn.BeginTransactionAsync();
+        
+        try
+        {
+            // Clean up any orphaned records with POID = 0 (shouldn't exist, but handle edge case)
+            // Must delete child records (POItem) first due to foreign key constraint
+            await conn.ExecuteAsync("DELETE FROM POItem WHERE POID = 0", transaction: transaction);
+            await conn.ExecuteAsync("DELETE FROM PurchaseOrder WHERE POID = 0", transaction: transaction);
+            
+            // Note: BookID in PurchaseOrder is from ERD, but we'll use first book from line items
+            var sql = @"INSERT INTO PurchaseOrder (UserID, BookID, Status, SubTot, Tax, Total, UpdAt)
+                        VALUES (@UserID, @BookID, @Status, @SubTot, @Tax, @Total, @UpdAt)";
+            
+            // Explicitly create parameters without POID to prevent it from being included
+            var parameters = new { 
+                UserID = order.UserID, 
+                BookID = order.BookID, 
+                Status = order.Status, 
+                SubTot = order.SubTot, 
+                Tax = order.Tax, 
+                Total = order.Total, 
+                UpdAt = order.UpdAt 
+            };
+            
+            // Execute INSERT
+            var rowsAffected = await conn.ExecuteAsync(sql, parameters, transaction: transaction);
+            
+            if (rowsAffected == 0)
+            {
+                await transaction.RollbackAsync();
+                throw new Exception("Failed to create purchase order");
+            }
+            
+            // Get the inserted ID
+            var orderId = await conn.QuerySingleAsync<int>("SELECT LAST_INSERT_ID()", transaction: transaction);
+            
+            if (orderId == 0)
+            {
+                // If LAST_INSERT_ID() returns 0, try to get the max POID as fallback
+                var maxId = await conn.QuerySingleAsync<int>("SELECT COALESCE(MAX(POID), 0) FROM PurchaseOrder", transaction: transaction);
+                if (maxId > 0)
+                {
+                    orderId = maxId;
+                }
+                else
+                {
+                    await transaction.RollbackAsync();
+                    throw new Exception("Failed to retrieve purchase order ID. AUTO_INCREMENT may not be configured correctly.");
+                }
+            }
+            
+            await transaction.CommitAsync();
+            return orderId;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<bool> CreateLineItemAsync(OrderLineItem lineItem)
@@ -105,6 +169,38 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
             new { POID = poId },
             splitOn: "BookID");
         return items.ToList();
+    }
+
+    public async Task<bool> DeleteOrderAsync(int poId)
+    {
+        using var conn = _connectionFactory.CreateConnection();
+        await conn.OpenAsync();
+        
+        using var transaction = await conn.BeginTransactionAsync();
+        
+        try
+        {
+            // Delete child records first (POItem) due to foreign key constraint
+            await conn.ExecuteAsync("DELETE FROM POItem WHERE POID = @POID", new { POID = poId }, transaction: transaction);
+            
+            // Then delete parent record (PurchaseOrder)
+            var rowsAffected = await conn.ExecuteAsync("DELETE FROM PurchaseOrder WHERE POID = @POID", new { POID = poId }, transaction: transaction);
+            
+            await transaction.CommitAsync();
+            return rowsAffected > 0;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteLineItemsByOrderIdAsync(int poId)
+    {
+        using var conn = _connectionFactory.CreateConnection();
+        var rowsAffected = await conn.ExecuteAsync("DELETE FROM POItem WHERE POID = @POID", new { POID = poId });
+        return rowsAffected >= 0; // Return true even if no rows deleted (idempotent)
     }
 }
 

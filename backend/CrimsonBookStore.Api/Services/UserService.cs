@@ -18,7 +18,8 @@ public class UserService : IUserService
         return users.Select(u => new UserResponse
         {
             UserID = u.UserID,
-            Username = $"{u.FName} {u.LName}",
+            FName = u.FName,
+            LName = u.LName,
             Email = u.Email,
             UserType = u.Role,
             CreatedAt = u.CreatedAt
@@ -33,7 +34,8 @@ public class UserService : IUserService
         return new UserResponse
         {
             UserID = user.UserID,
-            Username = $"{user.FName} {user.LName}",
+            FName = user.FName,
+            LName = user.LName,
             Email = user.Email,
             UserType = user.Role,
             CreatedAt = user.CreatedAt
@@ -45,12 +47,8 @@ public class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null) return false;
 
-        if (request.Username != null)
-        {
-            var nameParts = request.Username.Split(' ', 2);
-            user.FName = nameParts.Length > 0 ? nameParts[0] : request.Username;
-            user.LName = nameParts.Length > 1 ? nameParts[1] : "";
-        }
+        if (request.FName != null) user.FName = request.FName;
+        if (request.LName != null) user.LName = request.LName;
         if (request.Email != null) user.Email = request.Email;
         if (request.UserType != null) user.Role = request.UserType;
 

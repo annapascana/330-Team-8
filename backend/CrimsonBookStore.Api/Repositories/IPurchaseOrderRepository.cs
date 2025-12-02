@@ -11,5 +11,7 @@ public interface IPurchaseOrderRepository
     Task<bool> CreateLineItemAsync(OrderLineItem lineItem);
     Task<bool> UpdateStatusAsync(int poId, string status, DateTime? cancelledAt = null);
     Task<List<OrderLineItem>> GetLineItemsByOrderIdAsync(int poId);
+    Task<bool> DeleteOrderAsync(int poId);
+    Task<bool> DeleteLineItemsByOrderIdAsync(int poId);
 }
 

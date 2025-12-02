@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrimsonBookStore - Shopping Cart</title>
+    <title>CrimsonBookStore - My Profile</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,11 +13,11 @@
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="books.html">Books</a>
-                <a href="cart.html" class="active">Cart</a>
+                <a href="cart.html">Cart</a>
                 <a href="orders.html">My Orders</a>
                 <a href="sell.html">Sell Book</a>
                 <a href="admin.html">Admin</a>
-                <a href="profile.html">Profile</a>
+                <a href="profile.html" class="active">Profile</a>
                 <div class="auth-buttons">
                     <span id="userInfo" class="user-info" style="display: none;"></span>
                     <button id="logoutBtn" class="btn btn-outline" style="display: none;">Logout</button>
@@ -27,15 +27,15 @@
     </nav>
 
     <main class="container">
-        <h2>Shopping Cart</h2>
-        <div id="cartContent">
-            <div class="loading">Loading cart...</div>
+        <h2>My Profile</h2>
+        <div id="profileContent">
+            <div class="loading">Loading profile...</div>
         </div>
     </main>
 
     <script src="api.js"></script>
     <script src="auth.js"></script>
-    <script src="cart.js"></script>
+    <script src="profile.js"></script>
 </body>
 </html>
 
