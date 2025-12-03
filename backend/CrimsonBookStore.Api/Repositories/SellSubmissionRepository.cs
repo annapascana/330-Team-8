@@ -43,37 +43,50 @@ public class SellSubmissionRepository : ISellSubmissionRepository
         using var conn = _connectionFactory.CreateConnection();
         await conn.OpenAsync();
         
-        // Condition is a reserved keyword in MySQL, so we need to escape it with backticks
-        var sql = @"INSERT INTO SellSub (UserID, Title, AuthTxt, ISBN, Edition, `Condition`, 
-                    AskPrice, Status, CreatedAt)
-                    VALUES (@UserID, @Title, @AuthTxt, @ISBN, @Edition, @Condition,
-                    @AskPrice, @Status, @CreatedAt)";
+        using var transaction = await conn.BeginTransactionAsync();
         
-        var rowsAffected = await conn.ExecuteAsync(sql, submission);
-        
-        if (rowsAffected == 0)
+        try
         {
-            throw new Exception("Failed to create sell submission");
+            // Get the next SubID (since SubID is not AUTO_INCREMENT, we need to generate it manually)
+            var maxId = await conn.QuerySingleAsync<int>("SELECT COALESCE(MAX(SubID), 0) FROM SellSub", transaction: transaction);
+            var submissionId = maxId + 1;
+            
+            // Condition is a reserved keyword in MySQL, so we need to escape it with backticks
+            var sql = @"INSERT INTO SellSub (SubID, UserID, Title, AuthTxt, ISBN, Edition, `Condition`, 
+                        AskPrice, Status, CreatedAt)
+                        VALUES (@SubID, @UserID, @Title, @AuthTxt, @ISBN, @Edition, @Condition,
+                        @AskPrice, @Status, @CreatedAt)";
+            
+            var parameters = new
+            {
+                SubID = submissionId,
+                UserID = submission.UserID,
+                Title = submission.Title,
+                AuthTxt = submission.AuthTxt,
+                ISBN = submission.ISBN,
+                Edition = submission.Edition,
+                Condition = submission.Condition,
+                AskPrice = submission.AskPrice,
+                Status = submission.Status,
+                CreatedAt = submission.CreatedAt
+            };
+            
+            var rowsAffected = await conn.ExecuteAsync(sql, parameters, transaction: transaction);
+            
+            if (rowsAffected == 0)
+            {
+                await transaction.RollbackAsync();
+                throw new Exception("Failed to create sell submission");
+            }
+            
+            await transaction.CommitAsync();
+            return submissionId;
         }
-        
-        // Get the inserted ID
-        var submissionId = await conn.QuerySingleAsync<int>("SELECT LAST_INSERT_ID()");
-        
-        if (submissionId == 0)
+        catch
         {
-            // Fallback: try to get max ID
-            var maxId = await conn.QuerySingleAsync<int>("SELECT COALESCE(MAX(SubID), 0) FROM SellSub");
-            if (maxId > 0)
-            {
-                submissionId = maxId;
-            }
-            else
-            {
-                throw new Exception("Failed to retrieve submission ID. AUTO_INCREMENT may not be configured correctly.");
-            }
+            await transaction.RollbackAsync();
+            throw;
         }
-        
-        return submissionId;
     }
 
     public async Task<bool> UpdateAsync(SellSubmission submission)
@@ -83,6 +96,40 @@ public class SellSubmissionRepository : ISellSubmissionRepository
                     ReviewedAt = @ReviewedAt WHERE SubID = @SubID";
         var rowsAffected = await conn.ExecuteAsync(sql, submission);
         return rowsAffected > 0;
+    }
+
+    public async Task<int> CountApprovedByUserAndISBNAsync(int userId, string isbn)
+    {
+        using var conn = _connectionFactory.CreateConnection();
+        
+        if (string.IsNullOrEmpty(isbn))
+        {
+            return 0;
+        }
+        
+        // Normalize ISBN for comparison (remove dashes, spaces, convert to uppercase)
+        var normalizedISBN = NormalizeISBN(isbn);
+        
+        // Query with normalized comparison - handle ISBN format differences
+        // Compare both exact match and normalized (no dashes/spaces, uppercase)
+        var count = await conn.QuerySingleAsync<int>(
+            @"SELECT COUNT(*) FROM SellSub 
+              WHERE UserID = @UserID 
+              AND (
+                  ISBN = @ISBN 
+                  OR UPPER(REPLACE(REPLACE(ISBN, '-', ''), ' ', '')) = @NormalizedISBN
+                  OR UPPER(REPLACE(REPLACE(@ISBN, '-', ''), ' ', '')) = UPPER(REPLACE(REPLACE(ISBN, '-', ''), ' ', ''))
+              )
+              AND Status = 'Approved'",
+            new { UserID = userId, ISBN = isbn, NormalizedISBN = normalizedISBN });
+        return count;
+    }
+    
+    private static string NormalizeISBN(string isbn)
+    {
+        if (string.IsNullOrEmpty(isbn)) return "";
+        // Remove dashes, spaces, and convert to uppercase for comparison
+        return isbn.Replace("-", "").Replace(" ", "").ToUpperInvariant();
     }
 }
 

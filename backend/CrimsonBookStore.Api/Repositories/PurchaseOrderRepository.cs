@@ -161,11 +161,17 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
         using var conn = _connectionFactory.CreateConnection();
         
         // Query that joins with Book table to get book details
+        // Note: Author comes from AuthoredBy junction table, we'll get it separately if needed
         var sql = @"SELECT poi.POID, poi.LineNo, poi.BookID, poi.Qty, poi.UnitPrice, poi.LineTot,
-                    b.BookID, b.Title, b.ISBN, b.Author, b.Edition, b.Condition, b.SellPrice, b.StockQty, b.Status
+                    b.BookID, b.Title, b.ISBN, b.Edition, b.Condition, b.SellPrice, b.StockQty, b.Status,
+                    GROUP_CONCAT(DISTINCT a.AuthName SEPARATOR ', ') as Author
                     FROM POItem poi
                     LEFT JOIN Book b ON poi.BookID = b.BookID
+                    LEFT JOIN AuthoredBy ab ON b.BookID = ab.BookID
+                    LEFT JOIN Author a ON ab.AuthID = a.AuthID
                     WHERE poi.POID = @POID
+                    GROUP BY poi.POID, poi.LineNo, poi.BookID, poi.Qty, poi.UnitPrice, poi.LineTot,
+                             b.BookID, b.Title, b.ISBN, b.Edition, b.Condition, b.SellPrice, b.StockQty, b.Status
                     ORDER BY poi.LineNo";
         
         var items = await conn.QueryAsync<OrderLineItem, Api.Models.Book, OrderLineItem>(
@@ -173,6 +179,7 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
             (lineItem, book) =>
             {
                 lineItem.Book = book;
+                // Author is already populated in the Book object from the GROUP_CONCAT
                 return lineItem;
             },
             new { POID = poId },

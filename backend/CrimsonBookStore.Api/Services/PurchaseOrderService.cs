@@ -125,8 +125,8 @@ public class PurchaseOrderService : IPurchaseOrderService
         {
             try
             {
-                // Filter out invalid orders (POID = 0) - these shouldn't exist but handle gracefully
-                if (order.POID > 0)
+                // Filter out invalid orders (POID = 0) and orders with no line items
+                if (order.POID > 0 && order.LineItems != null && order.LineItems.Count > 0)
                 {
                     responses.Add(await MapToResponse(order));
                 }
@@ -228,6 +228,10 @@ public class PurchaseOrderService : IPurchaseOrderService
                 LineItemID = lineItem.LineItemID,
                 BookID = lineItem.BookID,
                 BookTitle = lineItem.Book?.Title ?? "Unknown",
+                Author = lineItem.Book?.Author,
+                ISBN = lineItem.Book?.ISBN,
+                Edition = lineItem.Book?.Edition,
+                Condition = lineItem.Book?.Condition,
                 Quantity = lineItem.Quantity,
                 UnitPrice = lineItem.UnitPrice,
                 LineTotal = lineItem.LineTotal

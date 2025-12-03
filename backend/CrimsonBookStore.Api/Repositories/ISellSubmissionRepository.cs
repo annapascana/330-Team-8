@@ -9,5 +9,6 @@ public interface ISellSubmissionRepository
     Task<SellSubmission?> GetByIdAsync(int submissionId);
     Task<int> CreateAsync(SellSubmission submission);
     Task<bool> UpdateAsync(SellSubmission submission);
+    Task<int> CountApprovedByUserAndISBNAsync(int userId, string isbn);
 }
 

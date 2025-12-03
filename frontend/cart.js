@@ -135,6 +135,21 @@ function closePaymentModal() {
     document.getElementById('paymentError').style.display = 'none';
 }
 
+function fillDemoPayment() {
+    // Fill in demo payment information
+    document.getElementById('cardholderName').value = 'John Doe';
+    document.getElementById('cardNumber').value = '4111 1111 1111 1111';
+    document.getElementById('expiryDate').value = '12/25';
+    document.getElementById('cvv').value = '123';
+    document.getElementById('billingAddress').value = '123 Main Street';
+    document.getElementById('billingCity').value = 'Tuscaloosa';
+    document.getElementById('billingState').value = 'AL';
+    document.getElementById('billingZip').value = '35401';
+    
+    // Hide any error messages
+    document.getElementById('paymentError').style.display = 'none';
+}
+
 function formatCardNumber(input) {
     let value = input.value.replace(/\s/g, '').replace(/[^0-9]/g, '');
     let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
