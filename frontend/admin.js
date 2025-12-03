@@ -19,9 +19,23 @@ function showTab(tabName) {
     else if (tabName === 'users') loadUsers();
 }
 
+function getSkeletonLoader(count = 5) {
+    return `
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+            ${Array(count).fill(0).map(() => `
+                <div class="skeleton-card">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 async function loadInventory() {
     const container = document.getElementById('inventoryContent');
-    container.innerHTML = '<div class="loading">Loading inventory...</div>';
+    container.innerHTML = getSkeletonLoader(8);
     
     try {
         const books = await booksAPI.getAll();
@@ -33,11 +47,6 @@ async function loadInventory() {
 
 function displayInventory(books) {
     const container = document.getElementById('inventoryContent');
-    
-    if (books.length === 0) {
-        container.innerHTML = '<div class="error">No books in inventory</div>';
-        return;
-    }
     
     let html = `
         <table class="inventory-table">
@@ -78,9 +87,12 @@ function displayInventory(books) {
     container.innerHTML = html;
 }
 
+let submissionsSortBy = 'date';
+let submissionsSortOrder = 'desc';
+
 async function loadSubmissions() {
     const container = document.getElementById('submissionsContent');
-    container.innerHTML = '<div class="loading">Loading submissions...</div>';
+    container.innerHTML = getSkeletonLoader(5);
     
     try {
         const submissions = await submissionsAPI.getAll();
@@ -90,24 +102,72 @@ async function loadSubmissions() {
     }
 }
 
+function sortSubmissions(submissions, sortBy, sortOrder) {
+    const sorted = [...submissions];
+    
+    sorted.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch (sortBy) {
+            case 'date':
+                aVal = new Date(a.submittedAt || a.createdAt || 0);
+                bVal = new Date(b.submittedAt || b.createdAt || 0);
+                break;
+            case 'status':
+                aVal = a.submissionStatus || '';
+                bVal = b.submissionStatus || '';
+                break;
+            case 'price':
+                aVal = a.askingPrice || 0;
+                bVal = b.askingPrice || 0;
+                break;
+            case 'title':
+                aVal = (a.title || '').toLowerCase();
+                bVal = (b.title || '').toLowerCase();
+                break;
+            default:
+                return 0;
+        }
+        
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    return sorted;
+}
+
 function displayAdminSubmissions(submissions) {
     const container = document.getElementById('submissionsContent');
     
-    if (submissions.length === 0) {
-        container.innerHTML = '<div class="error">No submissions found</div>';
-        return;
-    }
+    // Add sort controls
+    let html = `
+        <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+            <label><strong>Sort by:</strong></label>
+            <select id="submissionsSortBy" onchange="updateSubmissionsSort()" style="padding: 0.5rem;">
+                <option value="date" ${submissionsSortBy === 'date' ? 'selected' : ''}>Date</option>
+                <option value="status" ${submissionsSortBy === 'status' ? 'selected' : ''}>Status</option>
+                <option value="price" ${submissionsSortBy === 'price' ? 'selected' : ''}>Price</option>
+                <option value="title" ${submissionsSortBy === 'title' ? 'selected' : ''}>Title</option>
+            </select>
+            <select id="submissionsSortOrder" onchange="updateSubmissionsSort()" style="padding: 0.5rem;">
+                <option value="desc" ${submissionsSortOrder === 'desc' ? 'selected' : ''}>Descending</option>
+                <option value="asc" ${submissionsSortOrder === 'asc' ? 'selected' : ''}>Ascending</option>
+            </select>
+        </div>
+    `;
     
-    container.innerHTML = submissions.map(sub => {
+    // Sort submissions
+    const sortedSubmissions = sortSubmissions(submissions, submissionsSortBy, submissionsSortOrder);
+    
+    html += sortedSubmissions.map(sub => {
         const statusClass = `status-${sub.submissionStatus.toLowerCase()}`;
         return `
             <div class="submission-card">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
-                    <h4 style="margin: 0; flex: 1;">${escapeHtml(sub.title)}</h4>
-                    <span class="submission-status ${statusClass}">${sub.submissionStatus}</span>
-                </div>
-                <p style="margin: 0.5rem 0;"><strong>Author:</strong> ${escapeHtml(sub.author)} | <strong>ISBN:</strong> ${escapeHtml(sub.isbn)}</p>
-                <p style="margin: 0.5rem 0;"><strong>Asking Price:</strong> $${sub.askingPrice.toFixed(2)} | <strong>Condition:</strong> ${escapeHtml(sub.condition)}</p>
+                <h4>${escapeHtml(sub.title)}</h4>
+                <p><strong>Author:</strong> ${escapeHtml(sub.author)} | <strong>ISBN:</strong> ${escapeHtml(sub.isbn)}</p>
+                <p><strong>Asking Price:</strong> $${sub.askingPrice.toFixed(2)} | <strong>Condition:</strong> ${escapeHtml(sub.condition)}</p>
+                <span class="submission-status ${statusClass}">${sub.submissionStatus}</span>
                 ${sub.submissionStatus === 'Pending' ? `
                     <div class="action-buttons" style="margin-top: 1rem;">
                         <button onclick="approveSubmission(${sub.submissionID})" class="btn btn-success btn-small">Approve</button>
@@ -117,11 +177,22 @@ function displayAdminSubmissions(submissions) {
             </div>
         `;
     }).join('');
+    
+    container.innerHTML = html;
 }
+
+function updateSubmissionsSort() {
+    submissionsSortBy = document.getElementById('submissionsSortBy').value;
+    submissionsSortOrder = document.getElementById('submissionsSortOrder').value;
+    loadSubmissions();
+}
+
+let ordersSortBy = 'date';
+let ordersSortOrder = 'desc';
 
 async function loadAllOrders() {
     const container = document.getElementById('ordersContent');
-    container.innerHTML = '<div class="loading">Loading orders...</div>';
+    container.innerHTML = getSkeletonLoader(5);
     
     try {
         const orders = await ordersAPI.getAll();
@@ -131,36 +202,128 @@ async function loadAllOrders() {
     }
 }
 
+function sortOrders(orders, sortBy, sortOrder) {
+    const sorted = [...orders];
+    
+    sorted.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch (sortBy) {
+            case 'date':
+                aVal = new Date(a.orderDate || 0);
+                bVal = new Date(b.orderDate || 0);
+                break;
+            case 'status':
+                aVal = a.status || '';
+                bVal = b.status || '';
+                break;
+            case 'total':
+                aVal = a.total || 0;
+                bVal = b.total || 0;
+                break;
+            case 'orderId':
+                aVal = a.poid || 0;
+                bVal = b.poid || 0;
+                break;
+            case 'userId':
+                aVal = a.userID || 0;
+                bVal = b.userID || 0;
+                break;
+            default:
+                return 0;
+        }
+        
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    return sorted;
+}
+
 function displayAdminOrders(orders) {
     const container = document.getElementById('ordersContent');
     
-    if (orders.length === 0) {
-        container.innerHTML = '<div class="error">No orders found</div>';
-        return;
+    // Add sort controls
+    let html = `
+        <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+            <label><strong>Sort by:</strong></label>
+            <select id="ordersSortBy" onchange="updateOrdersSort()" style="padding: 0.5rem;">
+                <option value="date" ${ordersSortBy === 'date' ? 'selected' : ''}>Date</option>
+                <option value="status" ${ordersSortBy === 'status' ? 'selected' : ''}>Status</option>
+                <option value="total" ${ordersSortBy === 'total' ? 'selected' : ''}>Total</option>
+                <option value="orderId" ${ordersSortBy === 'orderId' ? 'selected' : ''}>Order ID</option>
+                <option value="userId" ${ordersSortBy === 'userId' ? 'selected' : ''}>User ID</option>
+            </select>
+            <select id="ordersSortOrder" onchange="updateOrdersSort()" style="padding: 0.5rem;">
+                <option value="desc" ${ordersSortOrder === 'desc' ? 'selected' : ''}>Descending</option>
+                <option value="asc" ${ordersSortOrder === 'asc' ? 'selected' : ''}>Ascending</option>
+            </select>
+            <button onclick="loadAllOrders()" class="btn btn-outline btn-small">Refresh</button>
+        </div>
+    `;
+    
+    // Sort orders
+    const sortedOrders = sortOrders(orders, ordersSortBy, ordersSortOrder);
+    
+    if (sortedOrders.length === 0) {
+        html += '<div class="error">No orders found</div>';
+    } else {
+        html += sortedOrders.map(order => {
+            const statusClass = `status-${order.status.toLowerCase()}`;
+            return `
+                <div class="order-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Order #${order.poid} - User ${order.userID}</h3>
+                        <span class="order-status ${statusClass}">${order.status}</span>
+                    </div>
+                    <p><strong>Date:</strong> ${new Date(order.orderDate).toLocaleDateString()} | <strong>Total:</strong> $${order.total.toFixed(2)}</p>
+                    ${order.lineItems && order.lineItems.length > 0 ? `
+                        <details style="margin-top: 1rem;">
+                            <summary>View Items (${order.lineItems.length})</summary>
+                            <table style="width: 100%; margin-top: 1rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Book</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${order.lineItems.map(item => `
+                                        <tr>
+                                            <td>${escapeHtml(item.bookTitle)}</td>
+                                            <td>${item.quantity}</td>
+                                            <td>$${item.unitPrice.toFixed(2)}</td>
+                                            <td>$${item.lineTotal.toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </details>
+                    ` : ''}
+                    <div class="action-buttons" style="margin-top: 1rem;">
+                        <select id="status_${order.poid}" onchange="updateOrderStatus(${order.poid})">
+                            <option value="New" ${order.status === 'New' ? 'selected' : ''}>New</option>
+                            <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
+                            <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                            <option value="Completed" ${order.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
     
-    container.innerHTML = orders.map(order => {
-        const statusClass = `status-${order.status.toLowerCase()}`;
-        return `
-            <div class="order-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <h3 style="margin: 0;">Order #${order.poid} - User ${order.userID}</h3>
-                    <span class="order-status ${statusClass}">${order.status}</span>
-                </div>
-                <p style="margin: 0.5rem 0;"><strong>Date:</strong> ${new Date(order.orderDate).toLocaleDateString()} | <strong>Total:</strong> $${order.total.toFixed(2)}</p>
-                <div class="action-buttons" style="margin-top: 1rem;">
-                    <label style="font-weight: 500; margin-right: 0.5rem;">Update Status:</label>
-                    <select id="status_${order.poid}" onchange="updateOrderStatus(${order.poid})">
-                        <option value="New" ${order.status === 'New' ? 'selected' : ''}>New</option>
-                        <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
-                        <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
-                        <option value="Completed" ${order.status === 'Completed' ? 'selected' : ''}>Completed</option>
-                        <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-                    </select>
-                </div>
-            </div>
-        `;
-    }).join('');
+    container.innerHTML = html;
+}
+
+function updateOrdersSort() {
+    ordersSortBy = document.getElementById('ordersSortBy').value;
+    ordersSortOrder = document.getElementById('ordersSortOrder').value;
+    loadAllOrders();
 }
 
 async function approveSubmission(id) {
@@ -168,10 +331,18 @@ async function approveSubmission(id) {
     
     try {
         await submissionsAPI.approve(id);
-        alert('Submission approved!');
+        if (window.toast) {
+            toast.success('Submission approved and added to inventory!', 3000, 'Approved');
+        } else {
+            alert('Submission approved!');
+        }
         loadSubmissions();
     } catch (error) {
-        alert('Failed to approve: ' + error.message);
+        if (window.toast) {
+            toast.error('Failed to approve: ' + error.message, 5000, 'Error');
+        } else {
+            alert('Failed to approve: ' + error.message);
+        }
     }
 }
 
@@ -180,10 +351,18 @@ async function rejectSubmission(id) {
     
     try {
         await submissionsAPI.reject(id);
-        alert('Submission rejected');
+        if (window.toast) {
+            toast.info('Submission rejected', 3000, 'Rejected');
+        } else {
+            alert('Submission rejected');
+        }
         loadSubmissions();
     } catch (error) {
-        alert('Failed to reject: ' + error.message);
+        if (window.toast) {
+            toast.error('Failed to reject: ' + error.message, 5000, 'Error');
+        } else {
+            alert('Failed to reject: ' + error.message);
+        }
     }
 }
 
@@ -192,43 +371,78 @@ async function updateOrderStatus(orderId) {
     
     try {
         await ordersAPI.updateStatus(orderId, status);
-        alert('Order status updated');
+        if (window.toast) {
+            toast.success(`Order status updated to ${status}`, 3000, 'Status Updated');
+        } else {
+            alert('Order status updated');
+        }
         loadAllOrders();
     } catch (error) {
-        alert('Failed to update status: ' + error.message);
+        if (window.toast) {
+            toast.error('Failed to update status: ' + error.message, 5000, 'Error');
+        } else {
+            alert('Failed to update status: ' + error.message);
+        }
     }
 }
 
 function showAddBookForm() {
-    document.getElementById('addBookModal').style.display = 'block';
+    const modal = document.getElementById('addBookModal');
+    modal.style.display = 'block';
+    document.getElementById('addBookForm').reset();
+    // Focus first input
+    setTimeout(() => document.getElementById('addISBN').focus(), 100);
 }
 
 function closeAddBookForm() {
     document.getElementById('addBookModal').style.display = 'none';
+    document.getElementById('addBookForm').reset();
 }
 
 document.getElementById('addBookForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding...';
+    
     const bookData = {
-        isbn: document.getElementById('addISBN').value,
-        title: document.getElementById('addTitle').value,
-        author: document.getElementById('addAuthor').value,
-        edition: document.getElementById('addEdition').value,
+        isbn: document.getElementById('addISBN').value.trim(),
+        title: document.getElementById('addTitle').value.trim(),
+        author: document.getElementById('addAuthor').value.trim(),
+        edition: document.getElementById('addEdition').value.trim(),
         condition: document.getElementById('addCondition').value,
         acquisitionCost: parseFloat(document.getElementById('addAcquisitionCost').value),
         sellingPrice: parseFloat(document.getElementById('addSellingPrice').value),
         stockQuantity: parseInt(document.getElementById('addStockQuantity').value)
     };
     
+    // Validation
+    if (bookData.sellingPrice <= bookData.acquisitionCost) {
+        alert('Selling price must be greater than acquisition cost');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+    
     try {
         await booksAPI.create(bookData);
-        alert('Book added successfully!');
+        if (window.toast) {
+            toast.success('Book added successfully!', 3000, 'Success');
+        } else {
+            alert('Book added successfully!');
+        }
         closeAddBookForm();
-        document.getElementById('addBookForm').reset();
         loadInventory();
     } catch (error) {
-        alert('Failed to add book: ' + error.message);
+        if (window.toast) {
+            toast.error('Failed to add book: ' + error.message, 5000, 'Error');
+        } else {
+            alert('Failed to add book: ' + error.message);
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 });
 
@@ -264,7 +478,10 @@ async function editBook(id) {
         document.getElementById('editStatus').value = book.status;
         
         // Show modal
-        document.getElementById('editBookModal').style.display = 'block';
+        const modal = document.getElementById('editBookModal');
+        modal.style.display = 'block';
+        // Focus first input
+        setTimeout(() => document.getElementById('editTitle').focus(), 100);
     } catch (error) {
         alert('Failed to load book: ' + error.message);
     }
@@ -272,16 +489,22 @@ async function editBook(id) {
 
 function closeEditBookForm() {
     document.getElementById('editBookModal').style.display = 'none';
+    document.getElementById('editBookForm').reset();
 }
 
 document.getElementById('editBookForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Updating...';
+    
     const bookId = parseInt(document.getElementById('editBookID').value);
     const bookData = {
-        title: document.getElementById('editTitle').value,
-        author: document.getElementById('editAuthor').value,
-        edition: document.getElementById('editEdition').value,
+        title: document.getElementById('editTitle').value.trim(),
+        author: document.getElementById('editAuthor').value.trim(),
+        edition: document.getElementById('editEdition').value.trim(),
         condition: document.getElementById('editCondition').value,
         acquisitionCost: parseFloat(document.getElementById('editAcquisitionCost').value),
         sellingPrice: parseFloat(document.getElementById('editSellingPrice').value),
@@ -289,13 +512,31 @@ document.getElementById('editBookForm').addEventListener('submit', async (e) => 
         status: document.getElementById('editStatus').value
     };
     
+    // Validation
+    if (bookData.sellingPrice <= bookData.acquisitionCost) {
+        alert('Selling price must be greater than acquisition cost');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+    
     try {
         await booksAPI.update(bookId, bookData);
-        alert('Book updated successfully!');
+        if (window.toast) {
+            toast.success('Book updated successfully!', 3000, 'Success');
+        } else {
+            alert('Book updated successfully!');
+        }
         closeEditBookForm();
         loadInventory();
     } catch (error) {
-        alert('Failed to update book: ' + error.message);
+        if (window.toast) {
+            toast.error('Failed to update book: ' + error.message, 5000, 'Error');
+        } else {
+            alert('Failed to update book: ' + error.message);
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 });
 
@@ -319,11 +560,6 @@ async function loadUsers() {
 
 function displayUsers(users) {
     const container = document.getElementById('usersContent');
-    
-    if (users.length === 0) {
-        container.innerHTML = '<div class="error">No users found</div>';
-        return;
-    }
     
     let html = `
         <table class="inventory-table">
@@ -394,6 +630,32 @@ async function editUser(id) {
         alert('Failed to update user: ' + error.message);
     }
 }
+
+// Close modals on ESC key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const editModal = document.getElementById('editBookModal');
+        const addModal = document.getElementById('addBookModal');
+        if (editModal && editModal.style.display === 'block') {
+            closeEditBookForm();
+        }
+        if (addModal && addModal.style.display === 'block') {
+            closeAddBookForm();
+        }
+    }
+});
+
+// Close modals on outside click
+document.addEventListener('click', (e) => {
+    const editModal = document.getElementById('editBookModal');
+    const addModal = document.getElementById('addBookModal');
+    if (e.target === editModal) {
+        closeEditBookForm();
+    }
+    if (e.target === addModal) {
+        closeAddBookForm();
+    }
+});
 
 // Load inventory by default
 document.addEventListener('DOMContentLoaded', () => {

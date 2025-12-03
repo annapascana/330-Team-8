@@ -1,7 +1,22 @@
 // Orders page functionality
+function getSkeletonLoader(count = 3) {
+    return `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            ${Array(count).fill(0).map(() => `
+                <div class="skeleton-card">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                    <div class="skeleton-text"></div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 async function loadOrders() {
     const container = document.getElementById('ordersContent');
-    container.innerHTML = '<div class="loading">Loading orders...</div>';
+    container.innerHTML = getSkeletonLoader(3);
     
     const user = getCurrentUser();
     if (!user) {
@@ -11,8 +26,24 @@ async function loadOrders() {
     
     try {
         const orders = await ordersAPI.getByUserId(user.userID);
+        
+        // Check if we just placed an order
+        const lastOrderId = sessionStorage.getItem('lastOrderId');
+        if (lastOrderId) {
+            sessionStorage.removeItem('lastOrderId');
+            // Verify the order is in the list
+            const orderFound = orders.some(o => o.poid.toString() === lastOrderId);
+            if (!orderFound) {
+                console.warn('Order ' + lastOrderId + ' not found in orders list, retrying...');
+                // Retry after a short delay
+                setTimeout(loadOrders, 1000);
+                return;
+            }
+        }
+        
         displayOrders(orders);
     } catch (error) {
+        console.error('Error loading orders:', error);
         container.innerHTML = `<div class="error">Error loading orders: ${error.message}</div>`;
     }
 }
@@ -75,10 +106,18 @@ async function cancelOrder(orderId) {
     
     try {
         await ordersAPI.cancel(orderId);
-        alert('Order cancelled successfully');
+        if (window.toast) {
+            toast.success('Order cancelled successfully. Stock has been restored.', 5000, 'Order Cancelled');
+        } else {
+            alert('Order cancelled successfully');
+        }
         loadOrders();
     } catch (error) {
-        alert('Failed to cancel order: ' + error.message);
+        if (window.toast) {
+            toast.error('Failed to cancel order: ' + error.message, 5000, 'Error');
+        } else {
+            alert('Failed to cancel order: ' + error.message);
+        }
     }
 }
 
@@ -87,6 +126,15 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Listen for storage changes (when user logs out)
+window.addEventListener('storage', (e) => {
+    if (e.key === 'currentUser' && e.newValue === null) {
+        // User logged out, clear orders display
+        const container = document.getElementById('ordersContent');
+        container.innerHTML = '<div class="error">Please log in to view your orders</div>';
+    }
+});
 
 document.addEventListener('DOMContentLoaded', loadOrders);
 

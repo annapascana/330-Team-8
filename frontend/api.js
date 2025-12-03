@@ -1,17 +1,61 @@
 // API Base URL - Use the same origin as the current page
+// Check if running from file:// protocol and show helpful error
+if (window.location.protocol === 'file:') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const body = document.body;
+        if (body) {
+            body.innerHTML = `
+                <div style="padding: 2rem; font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto;">
+                    <h1 style="color: #8B0000;">⚠️ Incorrect Access Method</h1>
+                    <p style="font-size: 1.1rem; margin: 1rem 0;">
+                        You're opening this file directly from your file system (file://), which doesn't work with this application.
+                    </p>
+                    <h2 style="color: #333; margin-top: 2rem;">How to Fix:</h2>
+                    <ol style="line-height: 1.8;">
+                        <li><strong>Start the backend server:</strong>
+                            <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; margin: 0.5rem 0;">
+cd 330-Team-8-main/backend/CrimsonBookStore.Api
+dotnet run</pre>
+                        </li>
+                        <li><strong>Open your browser</strong> and navigate to:
+                            <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; margin: 0.5rem 0;">
+<a href="http://localhost:5000" style="color: #8B0000; font-weight: bold;">http://localhost:5000</a></pre>
+                        </li>
+                        <li><strong>Do NOT</strong> open the HTML files directly from your file explorer</li>
+                    </ol>
+                    <p style="margin-top: 2rem; padding: 1rem; background: #e3f2fd; border-radius: 4px;">
+                        <strong>Note:</strong> The backend server automatically serves all frontend files. 
+                        You don't need a separate web server - just run <code>dotnet run</code> and access via <code>http://localhost:5000</code>
+                    </p>
+                </div>
+            `;
+        }
+    });
+}
+
 const API_BASE_URL = `${window.location.origin}/api`;
 
-// Helper function for API calls
-async function apiCall(endpoint, options = {}) {
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            credentials: 'include', // Include cookies for session
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
+// Helper function for API calls with retry mechanism
+async function apiCall(endpoint, options = {}, retries = 3, retryDelay = 1000) {
+    // Check if we're running from file:// protocol (not supported)
+    if (window.location.protocol === 'file:') {
+        throw new Error('Please access this site through http://localhost:5000. File:// protocol is not supported.');
+    }
+    
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            console.log(`API Call (attempt ${attempt}/${retries}):`, url, options.method || 'GET');
+            
+            const response = await fetch(url, {
+                ...options,
+                credentials: 'include', // Include cookies for session
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
 
         // Handle 204 No Content responses (no body) - check BEFORE reading body
         if (response.status === 204) {
@@ -58,10 +102,19 @@ async function apiCall(endpoint, options = {}) {
             }
         }
         
-        return text;
-    } catch (error) {
-        console.error('API Error:', error);
-        throw error;
+            return text;
+        } catch (error) {
+            // If it's the last attempt or a non-retryable error, throw
+            if (attempt === retries || (error.name !== 'TypeError' && error.name !== 'NetworkError')) {
+                console.error('API Error (final attempt):', error);
+                throw error;
+            }
+            
+            // Wait before retrying
+            console.warn(`API call failed, retrying in ${retryDelay}ms... (attempt ${attempt}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            retryDelay *= 1.5; // Exponential backoff
+        }
     }
 }
 
@@ -88,7 +141,7 @@ const booksAPI = {
     
     search: (params) => {
         const query = new URLSearchParams(params).toString();
-        return apiCall(`/books/search?${query}`);
+        return apiCall(`/books?${query}`);
     },
     
     create: (bookData) => 
@@ -127,6 +180,11 @@ const cartAPI = {
     
     remove: (bookId) => 
         apiCall(`/cart/remove/${bookId}`, {
+            method: 'DELETE'
+        }),
+    
+    clear: () => 
+        apiCall('/cart/clear', {
             method: 'DELETE'
         })
 };

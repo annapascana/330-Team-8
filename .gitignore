@@ -1,21 +1,33 @@
 # Build results
 [Dd]ebug/
-[Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-[Ww][Ii][Nn]32/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-bld/
 [Bb]in/
 [Oo]bj/
-[Ll]og/
-[Ll]ogs/
+*.dll
+*.exe
+*.pdb
 
-# Visual Studio cache/options directory
+# Visual Studio
 .vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Properties/launchSettings.json
 
 # User-specific files
 *.rsuser
@@ -24,23 +36,14 @@ bld/
 *.userosscache
 *.sln.docstates
 
-# .NET Core
-project.lock.json
-project.fragment.lock.json
-artifacts/
-
-# Rider
+# IDE
+.vs/
 .idea/
-*.sln.iml
-
-# VS Code
-.vscode/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
-
-# App settings (may contain sensitive data)
-appsettings.Development.json
-appsettings.Local.json
 

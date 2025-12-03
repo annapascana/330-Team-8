@@ -67,5 +67,17 @@ public class CartController : ControllerBase
         }
         return Ok(new { message = "Item removed from cart" });
     }
+
+    [HttpDelete("clear")]
+    public async Task<IActionResult> ClearCart()
+    {
+        var sessionId = GetSessionId();
+        var success = await _cartService.ClearCartAsync(sessionId);
+        if (!success)
+        {
+            return BadRequest(new { message = "Failed to clear cart" });
+        }
+        return Ok(new { message = "Cart cleared" });
+    }
 }
 

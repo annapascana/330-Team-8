@@ -51,7 +51,7 @@ function updateUI() {
         if (logoutBtn) logoutBtn.style.display = 'block';
         if (userInfo) {
             userInfo.textContent = `Welcome, ${currentUser.username}`;
-            userInfo.style.display = 'inline-block';
+            userInfo.style.display = 'block';
         }
     } else {
         if (loginBtn) loginBtn.style.display = 'inline-block';
@@ -127,9 +127,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                // Clear cart on backend before logging out
+                await cartAPI.clear();
+            } catch (error) {
+                console.warn('Failed to clear cart on logout:', error);
+                // Continue with logout even if cart clear fails
+            }
+            
+            // Clear user from session storage
             clearUser();
+            
+            // Show success message
             alert('Logged out successfully');
+            
+            // Refresh the page to clear any displayed cart/order data
+            // If on cart or orders page, redirect to home
+            const currentPage = window.location.pathname;
+            if (currentPage.includes('cart.html') || currentPage.includes('orders.html')) {
+                window.location.href = 'index.html';
+            } else {
+                // Reload current page to refresh any displayed data
+                window.location.reload();
+            }
         });
     }
     

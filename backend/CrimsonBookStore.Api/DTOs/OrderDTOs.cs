@@ -24,10 +24,6 @@ public class OrderLineItemResponse
     public int LineItemID { get; set; }
     public int BookID { get; set; }
     public string BookTitle { get; set; } = string.Empty;
-    public string? Author { get; set; }
-    public string? ISBN { get; set; }
-    public string? Edition { get; set; }
-    public string? Condition { get; set; }
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal LineTotal { get; set; }

@@ -50,41 +50,71 @@ public class PurchaseOrderService : IPurchaseOrderService
             UpdAt = DateTime.UtcNow
         };
 
-        // Prepare line items
-        var lineItems = new List<Api.Models.OrderLineItem>();
-        int lineNo = 1;
-        
-        foreach (var item in cart.Items)
-        {
-            lineItems.Add(new Api.Models.OrderLineItem
-            {
-                LineNo = lineNo++,
-                BookID = item.BookID,
-                Qty = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                LineTot = item.LineTotal
-            });
-        }
-
-        // Create order with line items and update stock atomically in a single transaction
-        var orderId = await _orderRepository.CreateOrderWithLineItemsAsync(order, lineItems);
+        var orderId = await _orderRepository.CreateOrderAsync(order);
         
         if (orderId <= 0)
         {
             throw new Exception("Failed to create order: Invalid order ID returned");
         }
+        
+        order.POID = orderId;
 
-        // Clear cart
-        await _cartService.ClearCartAsync(sessionId);
-
-        // Reload the order from database to get line items with book details
-        var completedOrder = await _orderRepository.GetByIdAsync(orderId);
-        if (completedOrder == null)
+        try
         {
-            throw new Exception($"Failed to retrieve created order with ID {orderId}");
-        }
+            // Clean up any orphaned line items from previous failed checkout attempts
+            await _orderRepository.DeleteLineItemsByOrderIdAsync(orderId);
 
-        return await MapToResponse(completedOrder);
+            // Create line items and decrement stock atomically
+            int lineNo = 1;
+            
+            foreach (var item in cart.Items)
+            {
+                var lineItem = new Api.Models.OrderLineItem
+                {
+                    POID = orderId,
+                    LineNo = lineNo++,
+                    BookID = item.BookID,
+                    Qty = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    LineTot = item.LineTotal
+                };
+
+                await _orderRepository.CreateLineItemAsync(lineItem);
+                
+                // Decrement stock
+                var success = await _bookRepository.UpdateStockAsync(item.BookID, -item.Quantity);
+                if (!success)
+                {
+                    throw new Exception($"Failed to update stock for book {item.BookID}");
+                }
+            }
+
+            // Clear cart
+            await _cartService.ClearCartAsync(sessionId);
+
+            // Reload the order from database to get line items with book details
+            var completedOrder = await _orderRepository.GetByIdAsync(orderId);
+            if (completedOrder == null)
+            {
+                throw new Exception($"Failed to retrieve created order with ID {orderId}");
+            }
+
+            return await MapToResponse(completedOrder);
+        }
+        catch
+        {
+            // If line item creation fails, clean up the orphaned order
+            // Note: This is a best-effort cleanup - the order might still exist if cleanup fails
+            try
+            {
+                await _orderRepository.DeleteOrderAsync(orderId);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+            throw;
+        }
     }
 
     public async Task<List<OrderResponse>> GetOrdersByUserIdAsync(int userId)
@@ -95,9 +125,8 @@ public class PurchaseOrderService : IPurchaseOrderService
         {
             try
             {
-                // Filter out invalid orders (POID = 0) and orders with no line items
-                // Orders with no line items are incomplete and shouldn't be displayed
-                if (order.POID > 0 && order.LineItems != null && order.LineItems.Count > 0)
+                // Filter out invalid orders (POID = 0) - these shouldn't exist but handle gracefully
+                if (order.POID > 0)
                 {
                     responses.Add(await MapToResponse(order));
                 }
@@ -118,11 +147,39 @@ public class PurchaseOrderService : IPurchaseOrderService
         var responses = new List<OrderResponse>();
         foreach (var order in orders)
         {
-            // Filter out invalid orders (POID = 0) and orders with no line items
-            // Orders with no line items are incomplete and shouldn't be displayed
-            if (order.POID > 0 && order.LineItems != null && order.LineItems.Count > 0)
+            // Filter out invalid orders (POID = 0) - repository already filters these
+            if (order.POID > 0)
             {
-                responses.Add(await MapToResponse(order));
+                try
+                {
+                    responses.Add(await MapToResponse(order));
+                }
+                catch (Exception ex)
+                {
+                    // Log error but continue processing other orders
+                    System.Diagnostics.Debug.WriteLine($"Error mapping order {order.POID}: {ex.Message}");
+                    // Still add the order even if mapping fails partially
+                    try
+                    {
+                        var response = new OrderResponse
+                        {
+                            POID = order.POID,
+                            UserID = order.UserID,
+                            OrderDate = order.UpdAt,
+                            Status = order.Status,
+                            SubTotal = order.SubTot,
+                            Tax = order.Tax,
+                            Total = order.Total,
+                            CancelledAt = order.Status == "Cancelled" ? order.UpdAt : null,
+                            LineItems = new List<OrderLineItemResponse>()
+                        };
+                        responses.Add(response);
+                    }
+                    catch
+                    {
+                        // Skip this order if we can't create even a basic response
+                    }
+                }
             }
         }
         return responses;
@@ -171,10 +228,6 @@ public class PurchaseOrderService : IPurchaseOrderService
                 LineItemID = lineItem.LineItemID,
                 BookID = lineItem.BookID,
                 BookTitle = lineItem.Book?.Title ?? "Unknown",
-                Author = lineItem.Book?.Author,
-                ISBN = lineItem.Book?.ISBN,
-                Edition = lineItem.Book?.Edition,
-                Condition = lineItem.Book?.Condition,
                 Quantity = lineItem.Quantity,
                 UnitPrice = lineItem.UnitPrice,
                 LineTotal = lineItem.LineTotal

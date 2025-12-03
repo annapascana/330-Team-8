@@ -19,8 +19,6 @@
                 <a href="admin.html" class="active">Admin</a>
                 <a href="profile.html">Profile</a>
                 <div class="auth-buttons">
-                    <button id="loginBtn" class="btn btn-outline">Login</button>
-                    <button id="registerBtn" class="btn btn-primary">Register</button>
                     <span id="userInfo" class="user-info" style="display: none;"></span>
                     <button id="logoutBtn" class="btn btn-outline" style="display: none;">Logout</button>
                 </div>
@@ -51,9 +49,7 @@
 
         <!-- Submissions Tab -->
         <div id="submissionsTab" class="tab-content">
-            <div class="admin-header">
-                <h3>Sell Submissions</h3>
-            </div>
+            <h3>Sell Submissions</h3>
             <div id="submissionsContent">
                 <div class="loading">Loading submissions...</div>
             </div>
@@ -61,9 +57,7 @@
 
         <!-- Orders Tab -->
         <div id="ordersTab" class="tab-content">
-            <div class="admin-header">
-                <h3>All Purchase Orders</h3>
-            </div>
+            <h3>All Purchase Orders</h3>
             <div id="ordersContent">
                 <div class="loading">Loading orders...</div>
             </div>
@@ -71,9 +65,7 @@
 
         <!-- Users Tab -->
         <div id="usersTab" class="tab-content">
-            <div class="admin-header">
-                <h3>User Management</h3>
-            </div>
+            <h3>User Management</h3>
             <div id="usersContent">
                 <div class="loading">Loading users...</div>
             </div>
@@ -88,45 +80,52 @@
             <form id="editBookForm">
                 <input type="hidden" id="editBookID">
                 <div class="form-group">
-                    <label>Title:</label>
-                    <input type="text" id="editTitle" required>
+                    <label>Title: <span style="color: red;">*</span></label>
+                    <input type="text" id="editTitle" required placeholder="Enter book title">
                 </div>
                 <div class="form-group">
-                    <label>Author:</label>
-                    <input type="text" id="editAuthor" required>
+                    <label>Author: <span style="color: red;">*</span></label>
+                    <input type="text" id="editAuthor" required placeholder="Enter author name">
                 </div>
                 <div class="form-group">
                     <label>Edition:</label>
-                    <input type="text" id="editEdition">
+                    <input type="text" id="editEdition" placeholder="e.g., 5th Edition">
                 </div>
                 <div class="form-group">
-                    <label>Condition:</label>
+                    <label>Condition: <span style="color: red;">*</span></label>
                     <select id="editCondition" required>
                         <option value="New">New</option>
                         <option value="Good">Good</option>
                         <option value="Fair">Fair</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Acquisition Cost ($):</label>
-                    <input type="number" id="editAcquisitionCost" step="0.01" min="0" required>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Acquisition Cost ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="editAcquisitionCost" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Selling Price ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="editSellingPrice" step="0.01" min="0" required placeholder="0.00">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Selling Price ($):</label>
-                    <input type="number" id="editSellingPrice" step="0.01" min="0" required>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Stock Quantity: <span style="color: red;">*</span></label>
+                        <input type="number" id="editStockQuantity" min="0" required placeholder="0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Status: <span style="color: red;">*</span></label>
+                        <select id="editStatus" required>
+                            <option value="Available">Available</option>
+                            <option value="Unavailable">Unavailable</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Stock Quantity:</label>
-                    <input type="number" id="editStockQuantity" min="0" required>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeEditBookForm()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Update Book</button>
                 </div>
-                <div class="form-group">
-                    <label>Status:</label>
-                    <select id="editStatus" required>
-                        <option value="Available">Available</option>
-                        <option value="Unavailable">Unavailable</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Update Book</button>
             </form>
         </div>
     </div>
@@ -138,125 +137,55 @@
             <h2>Add New Book</h2>
             <form id="addBookForm">
                 <div class="form-group">
-                    <label>ISBN:</label>
-                    <input type="text" id="addISBN" required>
+                    <label>ISBN: <span style="color: red;">*</span></label>
+                    <input type="text" id="addISBN" required placeholder="Enter ISBN">
                 </div>
                 <div class="form-group">
-                    <label>Title:</label>
-                    <input type="text" id="addTitle" required>
+                    <label>Title: <span style="color: red;">*</span></label>
+                    <input type="text" id="addTitle" required placeholder="Enter book title">
                 </div>
                 <div class="form-group">
-                    <label>Author:</label>
-                    <input type="text" id="addAuthor" required>
+                    <label>Author: <span style="color: red;">*</span></label>
+                    <input type="text" id="addAuthor" required placeholder="Enter author name">
                 </div>
                 <div class="form-group">
                     <label>Edition:</label>
-                    <input type="text" id="addEdition">
+                    <input type="text" id="addEdition" placeholder="e.g., 5th Edition">
                 </div>
                 <div class="form-group">
-                    <label>Condition:</label>
+                    <label>Condition: <span style="color: red;">*</span></label>
                     <select id="addCondition" required>
                         <option value="New">New</option>
                         <option value="Good">Good</option>
                         <option value="Fair">Fair</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Acquisition Cost ($):</label>
-                    <input type="number" id="addAcquisitionCost" step="0.01" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label>Selling Price ($):</label>
-                    <input type="number" id="addSellingPrice" step="0.01" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label>Stock Quantity:</label>
-                    <input type="number" id="addStockQuantity" min="0" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Add Book</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Login Modal -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Login</h2>
-            
-            <!-- Demo Accounts Info -->
-            <div class="demo-accounts" style="background: #e7f3ff; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #2196F3;">
-                <h3 style="margin-top: 0; font-size: 14px; color: #1976D2;">Demo Accounts (Click to fill):</h3>
-                <p style="font-size: 11px; margin: 4px 0 8px 0; color: #666;">
-                    <strong>Note:</strong> These accounts are pre-registered. If login fails, register a new account first.
-                </p>
-                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
-                    <div style="cursor: pointer; padding: 8px; background: white; border-radius: 3px;" 
-                         onclick="fillDemoLogin('admin@test.com', 'password123')">
-                        <strong>Admin:</strong> admin@test.com / password123
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Acquisition Cost ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="addAcquisitionCost" step="0.01" min="0" required placeholder="0.00">
                     </div>
-                    <div style="cursor: pointer; padding: 8px; background: white; border-radius: 3px;" 
-                         onclick="fillDemoLogin('user@test.com', 'password123')">
-                        <strong>Customer:</strong> user@test.com / password123
-                    </div>
-                    <div style="cursor: pointer; padding: 8px; background: white; border-radius: 3px;" 
-                         onclick="fillDemoLogin('admin@demo.com', 'admin123')">
-                        <strong>Demo Admin:</strong> admin@demo.com / admin123
-                    </div>
-                    <div style="cursor: pointer; padding: 8px; background: white; border-radius: 3px;" 
-                         onclick="fillDemoLogin('user@demo.com', 'user123')">
-                        <strong>Demo User:</strong> user@demo.com / user123
+                    <div class="form-group" style="flex: 1;">
+                        <label>Selling Price ($): <span style="color: red;">*</span></label>
+                        <input type="number" id="addSellingPrice" step="0.01" min="0" required placeholder="0.00">
                     </div>
                 </div>
-            </div>
-            
-            <form id="loginForm">
                 <div class="form-group">
-                    <label>Email:</label>
-                    <input type="email" id="loginEmail" required>
+                    <label>Stock Quantity: <span style="color: red;">*</span></label>
+                    <input type="number" id="addStockQuantity" min="0" required placeholder="0">
                 </div>
-                <div class="form-group">
-                    <label>Password:</label>
-                    <input type="password" id="loginPassword" required>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeAddBookForm()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Book</button>
                 </div>
-                <button type="submit" class="btn btn-primary">Login</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Register Modal -->
-    <div id="registerModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Register</h2>
-            <form id="registerForm">
-                <div class="form-group">
-                    <label>Username:</label>
-                    <input type="text" id="registerUsername" required>
-                </div>
-                <div class="form-group">
-                    <label>Email:</label>
-                    <input type="email" id="registerEmail" required>
-                </div>
-                <div class="form-group">
-                    <label>Password:</label>
-                    <input type="password" id="registerPassword" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Register</button>
             </form>
         </div>
     </div>
 
     <script src="api.js"></script>
     <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="admin.js"></script>
-    <script>
-        // Function to fill demo login credentials
-        function fillDemoLogin(email, password) {
-            document.getElementById('loginEmail').value = email;
-            document.getElementById('loginPassword').value = password;
-        }
-    </script>
 </body>
 </html>
 

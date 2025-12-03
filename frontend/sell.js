@@ -46,42 +46,22 @@ function displayPurchasedBooks(books) {
         return;
     }
     
-    container.innerHTML = books.map((book, index) => `
+    container.innerHTML = books.map(book => `
         <div class="book-card" style="margin-bottom: 1rem;">
             <h4>${escapeHtml(book.title)}</h4>
-            ${book.author ? `<p><strong>Author:</strong> ${escapeHtml(book.author)}</p>` : ''}
-            ${book.isbn ? `<p><strong>ISBN:</strong> ${escapeHtml(book.isbn)}</p>` : ''}
             <p><strong>Quantity:</strong> ${book.quantity}</p>
             <p><strong>Purchased:</strong> ${new Date(book.purchaseDate).toLocaleDateString()}</p>
-            <button class="btn btn-primary btn-small sell-book-btn" 
-                    data-book-index="${index}"
-                    style="margin-top: 0.5rem;">
+            <button onclick="createSubmissionFromBook(${book.bookID}, '${escapeHtml(book.title)}')" 
+                    class="btn btn-primary btn-small" style="margin-top: 0.5rem;">
                 Sell This Book
             </button>
         </div>
     `).join('');
-    
-    // Store books data for button clicks
-    window.purchasedBooksData = books;
-    
-    // Add event listeners to all sell buttons
-    container.querySelectorAll('.sell-book-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = parseInt(this.getAttribute('data-book-index'));
-            const book = window.purchasedBooksData[index];
-            createSubmissionFromBook(book);
-        });
-    });
 }
 
-function createSubmissionFromBook(book) {
+function createSubmissionFromBook(bookId, title) {
     // Pre-fill the form with book info
-    if (book.title) document.getElementById('sellTitle').value = book.title;
-    if (book.author) document.getElementById('sellAuthor').value = book.author;
-    if (book.isbn) document.getElementById('sellISBN').value = book.isbn;
-    if (book.edition) document.getElementById('sellEdition').value = book.edition;
-    if (book.condition) document.getElementById('sellCondition').value = book.condition;
-    
+    document.getElementById('sellTitle').value = title;
     // Scroll to form
     document.getElementById('sellForm').scrollIntoView({ behavior: 'smooth' });
 }
